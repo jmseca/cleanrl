@@ -200,3 +200,14 @@ CleanRL is a community-powered by project and our contributors run experiments o
 * We thank many contributors for using their own computers to run experiments
 * We thank Google's [TPU research cloud](https://sites.research.google/trc/about/) for providing TPU resources.
 * We thank [Hugging Face](https://huggingface.co/)'s cluster for providing GPU resources. 
+
+## === Added by Johnny ===
+
+### To make it work
+
+#### Tensorbaord
+
+* Instalar o *tensorbaord* - `pip install tensorboard`
+* Tentar fazer `tensorbaord --logdir runs/` no main dir
+* Se acima não funcionar, fazer `python -m tensorboard.main --logdir=runs`
+* Se a Python API der erro, é pq falta um executável no dir *site-packages*. O nome é *_cffi_backend.cpython-38-x86_64-linux-gnu.so* e acho que vem na instalação do *cffi*
