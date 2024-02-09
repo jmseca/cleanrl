@@ -40,23 +40,31 @@ class Args:
     """the entity (team) of wandb's project"""
     capture_video: bool = False
     """whether to capture videos of the agent performances (check out `videos` folder)"""
-    save_model: bool = False
+    save_model: bool = True
     """whether to save model into the `runs/{run_name}` folder"""
     upload_model: bool = False
     """whether to upload the saved model to huggingface"""
     hf_entity: str = ""
     """the user or org name of the model repository from the Hugging Face Hub"""
+    
+    # Retraining
+    retrain: bool = True
+    """whether to retrain a trained model or not"""
+    retrain_default: bool = True
+    """whether to retrain the latest model with the env-id chosen or not"""
+    retrain_run_name: str = "Laranjas e Bananas"
+    """the name of the model to retrain, if it is not the default"""
 
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    total_timesteps: int = 100000
+    total_timesteps: int = 800000
     """total timesteps of the experiments"""
     learning_rate: float = 1e-4
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
-    buffer_size: int = 1000
+    buffer_size: int = 10000
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
@@ -68,13 +76,13 @@ class Args:
     """the batch size of sample from the reply memory"""
     start_e: float = 1
     """the starting epsilon for exploration"""
-    end_e: float = 0.01
+    end_e: float = 0.2
     """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.10
+    exploration_fraction: float = 0.40
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
-    learning_starts: int = 80000
+    learning_starts: int = 8000
     """timestep to start learning"""
-    train_frequency: int = 4
+    train_frequency: int = 8
     """the frequency of training"""
 
 
@@ -174,7 +182,19 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
+    
     q_network = QNetwork(envs).to(device)
+    if args.retrain:
+        
+        model_name = f'{args.exp_name}.cleanrl_model'
+        if not(args.retrain_default):
+            q_network.load_state_dict(torch.load(f"runs/{args.retrain_run_name}/{model_name}"))
+        else:
+            # I have to pick the second last model, because the last one is the current one
+            retrain_run_name = sorted(filter(lambda x: f'{args.env_id}__{args.exp_name}' in x, os.listdir("runs/")), key=lambda x: int(x.split('_')[-1]))[-2]
+            print(f"runs/{retrain_run_name}/{model_name}")
+            q_network.load_state_dict(torch.load(f"runs/{retrain_run_name}/{model_name}"))
+    
     optimizer = optim.Adam(q_network.parameters(), lr=args.learning_rate)
     target_network = QNetwork(envs).to(device)
     target_network.load_state_dict(q_network.state_dict())
@@ -234,6 +254,7 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
                 if global_step % 100 == 0:
                     writer.add_scalar("losses/td_loss", loss, global_step)
                     writer.add_scalar("losses/q_values", old_val.mean().item(), global_step)
+                    # SPS = Steps per Second (I believe)
                     print("SPS:", int(global_step / (time.time() - start_time)))
                     writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
