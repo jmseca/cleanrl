@@ -48,17 +48,21 @@ class Args:
     """the user or org name of the model repository from the Hugging Face Hub"""
     
     # Retraining
-    retrain: bool = True
+    retrain: bool = False
     """whether to retrain a trained model or not"""
     retrain_default: bool = True
     """whether to retrain the latest model with the env-id chosen or not"""
     retrain_run_name: str = "Laranjas e Bananas"
     """the name of the model to retrain, if it is not the default"""
+    
+    # Model Name
+    default_name: bool = False
+    """whether to use the default name for the model or not"""
 
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    total_timesteps: int = 800000
+    total_timesteps: int = 500000
     """total timesteps of the experiments"""
     learning_rate: float = 1e-4
     """the learning rate of the optimizer"""
@@ -78,9 +82,9 @@ class Args:
     """the starting epsilon for exploration"""
     end_e: float = 0.2
     """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.40
+    exploration_fraction: float = 0.20
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
-    learning_starts: int = 8000
+    learning_starts: int = 20000
     """timestep to start learning"""
     train_frequency: int = 8
     """the frequency of training"""
@@ -149,7 +153,11 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
         )
     args = tyro.cli(Args)
     assert args.num_envs == 1, "vectorized envs are not supported at the moment"
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    
+    if args.default_name:
+        run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    else:
+        run_name = input("Please, insert the name of the run/model:\n> ")
     if args.track:
         import wandb
 
