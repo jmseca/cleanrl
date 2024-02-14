@@ -4,13 +4,17 @@ import random
 import time
 from dataclasses import dataclass
 
+print("Import 1")
+
 import gymnasium as gym
 import numpy as np
+print("Import 2")
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import tyro
+print("Import 3")
 from stable_baselines3.common.atari_wrappers import (
     ClipRewardEnv,
     EpisodicLifeEnv,
@@ -18,23 +22,31 @@ from stable_baselines3.common.atari_wrappers import (
     MaxAndSkipEnv,
     NoopResetEnv,
 )
+print("Import 4")
 from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
+print("Import 5")
 
 
 @dataclass
 class Args:
+    seed: int = 1
+    """seed of the experiment"""
+    torch_deterministic: bool = True
+    """if toggled, `torch.backends.cudnn.deterministic=False`"""
+    capture_video: bool = False
+    env_id: str = "BreakoutNoFrameskip-v4"
+    """the id of the environment"""
+
     save_model: bool = True
     """whether to save model into the `runs/{run_name}` folder"""
-    models_dir: str = "../runs/"
+    models_dir: str = "../automaterl/runs/"
     """the directory which stores the models we want to evaluate"""
     choose_model_in_runtime: bool = True
     """whether to print the available models from the 'models_dir' dir
     so user can specify the name of the model"""
     default_name: str = ""
     """default model id, if we do not choose model during runtime"""
-    upload_model: bool = False
-    """whether to upload the saved model to huggingface"""
     
 
     # Algorithm specific arguments
@@ -135,23 +147,12 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
 
     # Do Not Modify - jmseca
     if args.choose_model_in_runtime:
-        print(r for r in os.listdir(f"{models_dir}"))
+        print(os.listdir(f"{args.models_dir}"))
         run_name = input("Please, Choose the model to evaluate:\n> ")
     else:
         run_name = args.default_name
-    if args.track:
-        import wandb
-
-        wandb.init(
-            project=args.wandb_project_name,
-            entity=args.wandb_entity,
-            sync_tensorboard=True,
-            config=vars(args),
-            name=run_name,
-            monitor_gym=True,
-            save_code=True,
-        )
-    writer = SummaryWriter(f"runs/{run_name}")
+    
+    writer = SummaryWriter(f"{args.models_dir}{run_name}/eval")
 
     # TRY NOT TO MODIFY: seeding
     random.seed(args.seed)
@@ -171,57 +172,26 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
     q_network = QNetwork(envs).to(device)
         
     model_name = list(filter(lambda x : ".cleanrl_model" in x, os.listdir(f"{args.models_dir}{run_name}")))[0] 
-    print(f"{args.models_dir}{run_name}/{model_name}")
-    a
+    print(f"\n{args.models_dir}{run_name}/{model_name}\n")
     q_network.load_state_dict(torch.load(f"{args.models_dir}{run_name}/{model_name}"))
-        else:
-            # I have to pick the second last model, because the last one is the current one
-            retrain_run_name = sorted(filter(lambda x: f'{args.env_id}__{args.exp_name}' in x, os.listdir("runs/")), key=lambda x: int(x.split('_')[-1]))[-2]
-            print(f"runs/{retrain_run_name}/{model_name}")
-            q_network.load_state_dict(torch.load(f"runs/{retrain_run_name}/{model_name}"))
     
-    optimizer = optim.Adam(q_network.parameters(), lr=args.learning_rate)
-    target_network = QNetwork(envs).to(device)
-    target_network.load_state_dict(q_network.state_dict())
 
-    rb = ReplayBuffer(
-        args.buffer_size,
-        envs.single_observation_space,
-        envs.single_action_space,
-        device,
-        optimize_memory_usage=True,
-        handle_timeout_termination=False,
+    model_path = f'{args.models_dir}{run_name}/{model_name}.cleanrl_model'
+    print(f"model saved to {model_path}")
+    from cleanrl_utils.evals.dqn_eval import evaluate
+
+    episodic_returns = evaluate(
+        model_path,
+        make_env,
+        args.env_id,
+        eval_episodes=10,
+        run_name=f"{run_name}-eval",
+        Model=QNetwork,
+        device=device,
+        epsilon=0.05,
     )
-    start_time = time.time()
-
-    # TRY NOT TO MODIFY: start the game
-    obs, _ = envs.reset(seed=args.seed)
-
-    if args.save_model:
-        model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
-        torch.save(q_network.state_dict(), model_path)
-        print(f"model saved to {model_path}")
-        from cleanrl_utils.evals.dqn_eval import evaluate
-
-        episodic_returns = evaluate(
-            model_path,
-            make_env,
-            args.env_id,
-            eval_episodes=10,
-            run_name=f"{run_name}-eval",
-            Model=QNetwork,
-            device=device,
-            epsilon=0.05,
-        )
-        for idx, episodic_return in enumerate(episodic_returns):
-            writer.add_scalar("eval/episodic_return", episodic_return, idx)
-
-        if args.upload_model:
-            from cleanrl_utils.huggingface import push_to_hub
-
-            repo_name = f"{args.env_id}-{args.exp_name}-seed{args.seed}"
-            repo_id = f"{args.hf_entity}/{repo_name}" if args.hf_entity else repo_name
-            push_to_hub(args, episodic_returns, repo_id, "DQN", f"runs/{run_name}", f"videos/{run_name}-eval")
+    for idx, episodic_return in enumerate(episodic_returns):
+        writer.add_scalar("eval/episodic_return", episodic_return, idx)
 
     envs.close()
     writer.close()
