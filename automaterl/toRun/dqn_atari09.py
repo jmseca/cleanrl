@@ -62,7 +62,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    total_timesteps: int = 800000
+    total_timesteps: int = 500000
     """total timesteps of the experiments"""
     learning_rate: float = 1e-4
     """the learning rate of the optimizer"""
@@ -72,17 +72,17 @@ class Args:
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    tau: float = 1.0
+    tau: float = 0.5
     """the target network update rate"""
-    target_network_frequency: int = 1000
+    target_network_frequency: int = 5000
     """the timesteps it takes to update the target network"""
     batch_size: int = 32
     """the batch size of sample from the reply memory"""
     start_e: float = 1
     """the starting epsilon for exploration"""
-    end_e: float = 0
+    end_e: float = 0.2
     """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.40
+    exploration_fraction: float = 0.80
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
     learning_starts: int = 20000
     """timestep to start learning"""
@@ -107,7 +107,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
+        env = gym.wrappers.FrameStack(env, 2)
 
         env.action_space.seed(seed)
         return env

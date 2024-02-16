@@ -72,9 +72,9 @@ class Args:
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    tau: float = 0.7
+    tau: float = 0.5
     """the target network update rate"""
-    target_network_frequency: int = 1000
+    target_network_frequency: int = 5000
     """the timesteps it takes to update the target network"""
     batch_size: int = 32
     """the batch size of sample from the reply memory"""
@@ -82,7 +82,7 @@ class Args:
     """the starting epsilon for exploration"""
     end_e: float = 0.2
     """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.40
+    exploration_fraction: float = 0.80
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
     learning_starts: int = 20000
     """timestep to start learning"""
@@ -105,7 +105,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
         env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (84, 84))
+        env = gym.wrappers.ResizeObservation(env, (128, 128))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 4)
 

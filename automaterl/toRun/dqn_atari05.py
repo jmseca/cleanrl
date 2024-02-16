@@ -72,17 +72,17 @@ class Args:
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    tau: float = 1.0
+    tau: float = 0.5
     """the target network update rate"""
     target_network_frequency: int = 5000
     """the timesteps it takes to update the target network"""
-    batch_size: int = 32
+    batch_size: int = 48
     """the batch size of sample from the reply memory"""
     start_e: float = 1
     """the starting epsilon for exploration"""
     end_e: float = 0.2
     """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.40
+    exploration_fraction: float = 0.80
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
     learning_starts: int = 20000
     """timestep to start learning"""

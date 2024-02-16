@@ -72,7 +72,7 @@ class Args:
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    tau: float = 1.0
+    tau: float = 0.8
     """the target network update rate"""
     target_network_frequency: int = 1000
     """the timesteps it takes to update the target network"""
@@ -86,7 +86,7 @@ class Args:
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
     learning_starts: int = 20000
     """timestep to start learning"""
-    train_frequency: int = 64
+    train_frequency: int = 8
     """the frequency of training"""
 
 

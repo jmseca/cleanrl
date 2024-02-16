@@ -62,31 +62,31 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    total_timesteps: int = 1200000
+    total_timesteps: int = 500000
     """total timesteps of the experiments"""
     learning_rate: float = 1e-4
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
-    buffer_size: int = 20000
+    buffer_size: int = 10000
     """the replay memory buffer size"""
-    gamma: float = 0.9999
+    gamma: float = 0.99
     """the discount factor gamma"""
     tau: float = 1.0
     """the target network update rate"""
     target_network_frequency: int = 1000
     """the timesteps it takes to update the target network"""
-    batch_size: int = 256
+    batch_size: int = 32
     """the batch size of sample from the reply memory"""
     start_e: float = 1
     """the starting epsilon for exploration"""
-    end_e: float = 0.3
+    end_e: float = 0.2
     """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.60
+    exploration_fraction: float = 0.40
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
-    learning_starts: int = 35000
+    learning_starts: int = 20000
     """timestep to start learning"""
-    train_frequency: int = 64
+    train_frequency: int = 8
     """the frequency of training"""
 
 
@@ -105,7 +105,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
         env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (84, 84))
+        env = gym.wrappers.ResizeObservation(env, (128, 128))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 4)
 

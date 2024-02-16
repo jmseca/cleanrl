@@ -70,11 +70,11 @@ class Args:
     """the number of parallel game environments"""
     buffer_size: int = 10000
     """the replay memory buffer size"""
-    gamma: float = 0.5
+    gamma: float = 0.99
     """the discount factor gamma"""
     tau: float = 1.0
     """the target network update rate"""
-    target_network_frequency: int = 1000
+    target_network_frequency: int = 10000
     """the timesteps it takes to update the target network"""
     batch_size: int = 32
     """the batch size of sample from the reply memory"""

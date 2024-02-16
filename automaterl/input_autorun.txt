@@ -1,20 +1,22 @@
-BreakoutHighExplFraction01
-exploration_fraction = 0.8
-BreakoutSmallMemBuffer01
-buffer_size = 200
-BreakoutBigBatchSize01
-batch_size = 128
-BreakoutBigTrainFreq01
-train_freq = 64
-BreakoutSmallGamma01
-gamma = 0.5
-BreakoutBigTargetNetFreq01
-target_network_frequency = 5K
-BreakoutRandom01
-end_e = 0.3; batch_size = 256; expl_fraction = 0.6; train_freq = 64; steps = 1.2M; gamma = 0.9999; buffer_size = 20k; learning_starts = 35K
-BreakoutRandom02
-Same as Random01, but train_freq = 8; steps = 0.5M
-BreakoutSmallTau01
-tau = 0.5
+BreakoutHighExplFraction02
+exploration_fraction = 1
+BreakoutRandom03
+exploration_fraction = 0.8, tau = 0.5, target_network_frequency = 5K
+BreakoutSmallTau02
+tau = 0.35
+BreakoutSmallTau03
+tau = 0.8
+BreakoutHighTargetNetFreq02
+target_network_frequency = 10K
+BreakoutRandom04
+Same as Random03, with batch_size = 48
+BreakoutBiggerImage01
+ImageSize = 128x128
+BreakoutLessFrameStack01
+FrameStack = 2
+BreakoutRandom05
+Same as Random03, with bigger image (128x128)
 BreakoutNoExploration
-end_e = 0; expl_fraction = 0.4; batch_size = 64; steps = 0.8M
+Same as Random03, with FrameStack = 2
+BreakoutBigImgLessStack01
+ImageSize = 128x128, FrameStack = 2

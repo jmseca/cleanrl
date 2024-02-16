@@ -68,13 +68,13 @@ class Args:
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
-    buffer_size: int = 200
+    buffer_size: int = 10000
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    tau: float = 1.0
+    tau: float = 0.5
     """the target network update rate"""
-    target_network_frequency: int = 1000
+    target_network_frequency: int = 5000
     """the timesteps it takes to update the target network"""
     batch_size: int = 32
     """the batch size of sample from the reply memory"""
@@ -82,7 +82,7 @@ class Args:
     """the starting epsilon for exploration"""
     end_e: float = 0.2
     """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.40
+    exploration_fraction: float = 0.80
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
     learning_starts: int = 20000
     """timestep to start learning"""

@@ -1,7 +1,3 @@
-"""
-This is my first experiment with DQN, where I substitute the convluational layers with a Vision Transformer.
-"""
-
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/dqn/#dqn_ataripy
 import os
 import random
@@ -14,7 +10,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import torchvision.models as models
 import tyro
 from stable_baselines3.common.atari_wrappers import (
     ClipRewardEnv,
@@ -87,7 +82,7 @@ class Args:
     """the starting epsilon for exploration"""
     end_e: float = 0.2
     """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.20
+    exploration_fraction: float = 0.40
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
     learning_starts: int = 20000
     """timestep to start learning"""
@@ -110,9 +105,9 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
         env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (96, 96))
+        env = gym.wrappers.ResizeObservation(env, (128, 128))
         env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 3)
+        env = gym.wrappers.FrameStack(env, 2)
 
         env.action_space.seed(seed)
         return env
@@ -122,43 +117,24 @@ def make_env(env_id, seed, idx, capture_video, run_name):
 
 # ALGO LOGIC: initialize agent here:
 class QNetwork(nn.Module):
-    def __init__(self, env, hidden_dim=512):
+    def __init__(self, env):
         super().__init__()
-        self.env = env
-        
-        # Load a pre-trained Vision Transformer model (e.g., ViT-base)
-        self.vit_model = models.vision_transformer.vit_b_16(image_size=96)
-        
-        
-        # Replace the classification head of the Vision Transformer with a new head for Q-values
-        #print(self.vit_model)
-        num_features = self.vit_model.heads.head.out_features
-        #print(num_features.out_features,type(num_features))
-        #self.vit_model.head = nn.Identity()  # Remove the existing head
-
-        # Add a hidden layer
-        self.hidden_layer = nn.Linear(num_features, hidden_dim)
-        
-        # Final linear layer for Q-values
-        self.q_values_layer = nn.Linear(hidden_dim, env.single_action_space.n)
+        self.network = nn.Sequential(
+            nn.Conv2d(4, 32, 8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(3136, 512),
+            nn.ReLU(),
+            nn.Linear(512, env.single_action_space.n),
+        )
 
     def forward(self, x):
-        # Ensure input is in the range [0, 1] (since ViT expects input in this range)
-        x = x / 255.0
-        
-        # Resize input images to match the expected size of the Vision Transformer
-        #x = nn.functional.interpolate(x, size=(224, 224), mode='bilinear', align_corners=False)
-        
-        # Forward pass through the Vision Transformer
-        feature_embeddings = self.vit_model(x)
-        
-        # Pass feature embeddings through the hidden layer
-        hidden_output = torch.relu(self.hidden_layer(feature_embeddings))
-        
-        # Final linear layer for Q-values
-        q_values = self.q_values_layer(hidden_output)
-        
-        return q_values
+        return self.network(x / 255.0)
+
 
 def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     slope = (end_e - start_e) / duration
@@ -230,6 +206,7 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
     optimizer = optim.Adam(q_network.parameters(), lr=args.learning_rate)
     target_network = QNetwork(envs).to(device)
     target_network.load_state_dict(q_network.state_dict())
+
     rb = ReplayBuffer(
         args.buffer_size,
         envs.single_observation_space,
@@ -241,9 +218,8 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
     start_time = time.time()
 
     # TRY NOT TO MODIFY: start the game
-    obs, _ = envs.reset(seed=args.seed)            
+    obs, _ = envs.reset(seed=args.seed)
     for global_step in range(args.total_timesteps):
-        
         # ALGO LOGIC: put action logic here
         epsilon = linear_schedule(args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps, global_step)
         if random.random() < epsilon:
