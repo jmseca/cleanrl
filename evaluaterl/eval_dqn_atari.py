@@ -47,37 +47,17 @@ class Args:
     so user can specify the name of the model"""
     default_name: str = ""
     """default model id, if we do not choose model during runtime"""
+    evaluate_all: bool = False
+    """if toggled, evaluate all models in the `models_dir`"""
     
 
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    total_timesteps: int = 500000
-    """total timesteps of the experiments"""
-    learning_rate: float = 1e-4
-    """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
     buffer_size: int = 10000
     """the replay memory buffer size"""
-    gamma: float = 0.99
-    """the discount factor gamma"""
-    tau: float = 1.0
-    """the target network update rate"""
-    target_network_frequency: int = 1000
-    """the timesteps it takes to update the target network"""
-    batch_size: int = 32
-    """the batch size of sample from the reply memory"""
-    start_e: float = 1
-    """the starting epsilon for exploration"""
-    end_e: float = 0.2
-    """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.20
-    """the fraction of `total-timesteps` it takes from start-e to go end-e"""
-    learning_starts: int = 20000
-    """timestep to start learning"""
-    train_frequency: int = 8
-    """the frequency of training"""
 
 
 def make_env(env_id, seed, idx, capture_video, run_name):
@@ -125,12 +105,6 @@ class QNetwork(nn.Module):
     def forward(self, x):
         return self.network(x / 255.0)
 
-
-def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
-    slope = (end_e - start_e) / duration
-    return max(slope * t + start_e, end_e)
-
-
 if __name__ == "__main__":
     import stable_baselines3 as sb3
 
@@ -144,54 +118,58 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
     args = tyro.cli(Args)
     assert args.num_envs == 1, "vectorized envs are not supported at the moment"
     
-
-    # Do Not Modify - jmseca
-    if args.choose_model_in_runtime:
-        print(os.listdir(f"{args.models_dir}"))
-        run_name = input("Please, Choose the model to evaluate:\n> ")
+    if args.evaluate_all:
+        run_names = os.listdir(args.models_dir)
     else:
-        run_name = args.default_name
+
+        # Do Not Modify - jmseca
+        if args.choose_model_in_runtime:
+            print(os.listdir(f"{args.models_dir}"))
+            run_names = [input("Please, Choose the model to evaluate:\n> ")]
+        else:
+            run_names = [args.default_name]
     
-    writer = SummaryWriter(f"{args.models_dir}{run_name}/eval")
-
-    # TRY NOT TO MODIFY: seeding
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.backends.cudnn.deterministic = args.torch_deterministic
-
-    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
-
-    # env setup
-    envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, args.seed + i, i, args.capture_video, run_name) for i in range(args.num_envs)]
-    )
-    assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
-
+    for run_name in run_names:
+        print(f"Evaluating {run_name}")
     
-    q_network = QNetwork(envs).to(device)
+        writer = SummaryWriter(f"{args.models_dir}{run_name}/eval")
+
+        # TRY NOT TO MODIFY: seeding
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.backends.cudnn.deterministic = args.torch_deterministic
+
+        device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+
+        # env setup
+        envs = gym.vector.SyncVectorEnv(
+            [make_env(args.env_id, args.seed + i, i, args.capture_video, run_name) for i in range(args.num_envs)]
+        )
+        assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
+
         
-    model_name = list(filter(lambda x : ".cleanrl_model" in x, os.listdir(f"{args.models_dir}{run_name}")))[0] 
-    print(f"\n{args.models_dir}{run_name}/{model_name}\n")
-    q_network.load_state_dict(torch.load(f"{args.models_dir}{run_name}/{model_name}"))
-    
+        q_network = QNetwork(envs).to(device)
+            
+        model_name = list(filter(lambda x : ".cleanrl_model" in x, os.listdir(f"{args.models_dir}{run_name}")))[0] 
+        print(f"\n{args.models_dir}{run_name}/{model_name}\n")
+        q_network.load_state_dict(torch.load(f"{args.models_dir}{run_name}/{model_name}"))
+        
 
-    model_path = f'{args.models_dir}{run_name}/{model_name}.cleanrl_model'
-    print(f"model saved to {model_path}")
-    from cleanrl_utils.evals.dqn_eval import evaluate
+        model_path = f'{args.models_dir}{run_name}/{model_name}'
+        from cleanrl_utils.evals.dqn_eval import evaluate
+        episodic_returns = evaluate(
+            model_path,
+            make_env,
+            args.env_id,
+            eval_episodes=10,
+            run_name=f"{run_name}-eval",
+            Model=QNetwork,
+            device=device,
+            epsilon=0.05,
+        )
+        for idx, episodic_return in enumerate(episodic_returns):
+            writer.add_scalar("eval/episodic_return", episodic_return, idx)
 
-    episodic_returns = evaluate(
-        model_path,
-        make_env,
-        args.env_id,
-        eval_episodes=10,
-        run_name=f"{run_name}-eval",
-        Model=QNetwork,
-        device=device,
-        epsilon=0.05,
-    )
-    for idx, episodic_return in enumerate(episodic_returns):
-        writer.add_scalar("eval/episodic_return", episodic_return, idx)
-
-    envs.close()
-    writer.close()
+        envs.close()
+        writer.close()
