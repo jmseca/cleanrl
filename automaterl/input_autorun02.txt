@@ -1,0 +1,10 @@
+BreakoutBiggerImage01
+ImageSize = 128x128
+BreakoutLessFrameStack01
+FrameStack = 2
+BreakoutRandom05
+Same as Random03, with bigger image (128x128)
+BreakoutNoExploration
+Same as Random03, with FrameStack = 2
+BreakoutBigImgLessStack01
+ImageSize = 128x128, FrameStack = 2

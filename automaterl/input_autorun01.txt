@@ -1,0 +1,12 @@
+BreakoutHighExplFraction02
+exploration_fraction = 1
+BreakoutRandom03
+exploration_fraction = 0.8, tau = 0.5, target_network_frequency = 5K
+BreakoutSmallTau02
+tau = 0.35
+BreakoutSmallTau03
+tau = 0.8
+BreakoutHighTargetNetFreq02
+target_network_frequency = 10K
+BreakoutRandom04
+Same as Random03, with batch_size = 48

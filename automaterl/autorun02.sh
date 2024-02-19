@@ -1,19 +1,19 @@
 #!/bin/bash
 
-log_file="logautofile.log"
-names_file="model_names.txt"
+log_file="logautofile02.log"
+names_file="model_names02.txt"
 
 truncate -s 0 $log_file
 
-for ((i=0; i<=10; i++)); do
+for ((i=6; i<=10; i++)); do
     file="toRun/dqn_atari0${i}.py"
 
     read model_name
 
-    echo $model_name > "model_names.txt"
+    echo $model_name > "$names_file"
 
     echo "About to Run $file" >> "$log_file"
-    python3 "$file" < "model_names.txt"
+    python3 "$file" < "$names_file"
     echo "FINISHED $file" >> "$log_file"
 
     read model_descr
