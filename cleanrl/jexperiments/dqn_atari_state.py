@@ -205,6 +205,8 @@ class Args:
     #Model Consts
     normalize_net_inputs: bool = True
     """whether to normalize the inputs of the NN or not"""
+    input_max_values: int = 5
+    """When normalized, the inputs will be in the range [0, input_max_values]"""
 
 
 def make_pre_env(env_id, seed, idx, capture_video, run_name):
@@ -295,7 +297,7 @@ class QNetwork(nn.Module):
             norm_bricks = [brick / 63 for brick in bricks]
             
             x = np.array([norm_bar_pos, norm_ball_pos[0], norm_ball_pos[1],
-                          norm_ball_speed[0], norm_ball_speed[1]] + norm_bricks)
+                          norm_ball_speed[0], norm_ball_speed[1]] + norm_bricks) * args.input_max_values
             
         else:            
             x = np.array([bar_pos, ball_pos[0], ball_pos[1], ball_speed[0], ball_speed[1]] + bricks)
