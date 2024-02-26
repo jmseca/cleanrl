@@ -11,32 +11,30 @@ class ImageArgs:
     """width and height of the image"""
     
     # Bricks
-    wall_size: int = 7
+    wall_size: int = 5
     """the size of the wall in the image"""
-    brick_columns: tuple = (3,9,15,21,27,34,40,47,53,60,65,72,79,85,92,98,105,111)
+    brick_columns: tuple = (2,6,10,14,18,22,27,31,35,39,43,47,51,55,59,63,67,72)
     """where the bricks are located in the image, starting from first pixel after the wall"""
     brick_values : tuple = (85, 124, 148, 131, 129, 110)
     """brick pixel values, bottom up"""
-    brick_lines : tuple = (54, 51, 47, 43, 40, 36)
+    brick_lines : tuple = (36, 33, 31, 29, 26, 23)
     """horizontal lines where bricks info is located"""
     
     #Bar
-    bar_line: int = 116
+    bar_line: int = 76
     """horizontal line where the bar is located"""
     bar_value : int = 110
     """bar pixel value on line 'bar_line'"""
-    bar_half_size: int = 7
+    bar_half_size: int = 5
     """half the size of the bar"""
     
     #Ball
     circular_for_radius: int = 5
     """radius of the circular for loop to find the ball"""
-    ball_line_start: int = 20
+    ball_line_start: int = 13
     """first line where the ball can be found"""
-    ball_line_end: int = 117
+    ball_line_end: int = 77
     """last line where the ball can be found"""
-    ball_line_val: int = 110
-    """ball pixel value"""
     
 img_args = tyro.cli(ImageArgs)
 
@@ -108,9 +106,9 @@ def get_ball_pos(frame):
     def is_ball(column,line):
         lst = [frame[line-1][column], frame[line][column+1], frame[line+1][column], frame[line][column-1]]
         val = frame[line][column]
-        if val == img_args.ball_line_val and len(list(filter(lambda x: 0< x < val, lst))) >= 2:
+        if len(list(filter(lambda x: 0< x < val, lst))) >= 2:
             lst = [frame[line-2][column], frame[line][column+2], frame[line+2][column], frame[line][column-2]]
-            return len(list(filter(lambda x: x == 0, lst))) >= 2 and len(list(filter(lambda x: x == img_args.ball_line_val, lst)))==0
+            return len(list(filter(lambda x: x == 0, lst))) >= 2
         return False
     
     if last_ball_pos[0] < 0:

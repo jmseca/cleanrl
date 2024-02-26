@@ -95,7 +95,7 @@ class Args:
     """the ending epsilon for exploration"""
     exploration_fraction: float = 0.20
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
-    learning_starts: int = 100 #Dont forget to put back to 20K
+    learning_starts: int = 20000 
     """timestep to start learning"""
     train_frequency: int = 8
     """the frequency of training"""
@@ -117,7 +117,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
         env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (64, 64))
+        env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 2)
 
@@ -233,14 +233,24 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
     )
     start_time = time.time()
 
-    randomz = False
     # TRY NOT TO MODIFY: start the game
     obs, _ = envs.reset(seed=args.seed)
-    for global_step in range(args.total_timesteps):
+    iii = 0
+    for global_step in range(args.total_timesteps):        
+        
+        if iii < 10 and global_step%5==0:
+            
+            with open(f"img/Array_{iii}.txt", "w") as f:
+                for i,line in enumerate(obs[0][0]):
+                    f.write(f'{str(line)} {i}\n')
+                    
+            plt.imshow(obs[0][0], cmap='gray')
+            plt.axis('off')  # Disable axis
+            plt.savefig(f'img/Img_{iii}.png', bbox_inches='tight', pad_inches=0)  # Save the image
+            iii+=1
         # ALGO LOGIC: put action logic here
         epsilon = linear_schedule(args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps, global_step)
         if random.random() < epsilon:
-            randomz = True
             actions = np.array([bout_img_decoder.get_human_action(env_obs,64) for env_obs in obs])
         else:
             q_values = q_network(torch.Tensor(obs).to(device))
