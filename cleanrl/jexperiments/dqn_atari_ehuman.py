@@ -1,5 +1,7 @@
 # This version of dqn_atari uses a e-greedy policy
 # When exploring, it simulates a human, moving the bar to direction where the ball is
+# I have added a parameter to this - rain_man - which is the probability of choosing a human-like action
+# instead of a random one.  
 
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/dqn/#dqn_ataripy
 import os
@@ -99,6 +101,10 @@ class Args:
     """timestep to start learning"""
     train_frequency: int = 8
     """the frequency of training"""
+    
+    rain_man: float = 0.7
+    """probability of choosing an action that follows the ball (human-like)
+    when exploring."""
         
 
 
@@ -235,23 +241,17 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
 
     # TRY NOT TO MODIFY: start the game
     obs, _ = envs.reset(seed=args.seed)
-    iii = 0
     for global_step in range(args.total_timesteps):        
         
-        if iii < 10 and global_step%5==0:
-            
-            with open(f"img/Array_{iii}.txt", "w") as f:
-                for i,line in enumerate(obs[0][0]):
-                    f.write(f'{str(line)} {i}\n')
-                    
-            plt.imshow(obs[0][0], cmap='gray')
-            plt.axis('off')  # Disable axis
-            plt.savefig(f'img/Img_{iii}.png', bbox_inches='tight', pad_inches=0)  # Save the image
-            iii+=1
         # ALGO LOGIC: put action logic here
         epsilon = linear_schedule(args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps, global_step)
         if random.random() < epsilon:
-            actions = np.array([bout_img_decoder.get_human_action(env_obs,64) for env_obs in obs])
+            if random.random() < args.rain_man:
+                #Human-like action
+                actions = np.array([bout_img_decoder.get_human_action(env_obs,64) for env_obs in obs])
+            else:
+                #Random action
+                actions = np.array([envs.single_action_space.sample() for _ in range(args.num_envs)])
         else:
             q_values = q_network(torch.Tensor(obs).to(device))
             actions = torch.argmax(q_values, dim=1).cpu().numpy()
