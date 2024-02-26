@@ -95,7 +95,9 @@ class QNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
         
-        hidden_input = 3136 if args.image_size == 84 else 9216
+        #hidden_input = 3136 if args.image_size == 84 else 9216
+        hidden_input = 1024
+        last_hidden = 128
         
         self.network = nn.Sequential(
             nn.Conv2d(args.frame_stack, 32, 8, stride=4),
@@ -105,9 +107,9 @@ class QNetwork(nn.Module):
             nn.Conv2d(64, 64, 3, stride=1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(hidden_input, 512),
+            nn.Linear(hidden_input, last_hidden),
             nn.ReLU(),
-            nn.Linear(512, env.single_action_space.n),
+            nn.Linear(last_hidden, env.single_action_space.n),
         )
 
     def forward(self, x):
@@ -140,14 +142,14 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
     for run_name in run_names:
         print(f"Evaluating {run_name}")
         
-        args.frame_stack = 4
-        args.image_size = 84
-        if "Random06" in run_name or "Stack" in run_name:
-            print("LESS STACK")
-            args.frame_stack = 2
-        if "Img" in run_name or "BiggerImage" in run_name or "Random05" in run_name:
-            print("BIGGER IMAGE")
-            args.image_size = 128
+        args.frame_stack = 2
+        args.image_size = 64
+        #if "Random06" in run_name or "Stack" in run_name:
+        #    print("LESS STACK")
+        #    args.frame_stack = 2
+        #if "Img" in run_name or "BiggerImage" in run_name or "Random05" in run_name:
+        #    print("BIGGER IMAGE")
+        #    args.image_size = 128
             
         
         writer = SummaryWriter(f"{args.models_dir}{run_name}/eval")

@@ -1,10 +1,4 @@
-BreakoutBiggerImage01
-ImageSize = 128x128; Hidden Layer (9216,512) - because of the image size
-BreakoutLessFrameStack01
-FrameStack = 2, 1st ConvLayer nn.Conv2d(2, 32, 8, stride=4) - because of the frame stack
-BreakoutRandom05
-Same as Random03, with bigger image (128x128), Hidden Layer (9216,512) - because of the image size
-BreakoutNoExploration
-Same as Random03, with FrameStack = 2, 1st ConvLayer nn.Conv2d(2, 32, 8, stride=4) - because of the frame stack
-BreakoutBigImgLessStack01
-ImageSize = 128x128, FrameStack = 2, Hidden Layer (9216,512) - because of the image size, 1st ConvLayer nn.Conv2d(2, 32, 8, stride=4) - because of the frame stack
+BreakoutERainMan01
+rain_man = 0.75, exploration_fraction = 0.5, end_e = 0.2, Fstack = 2, 84x84 img
+BreakoutERainMan02
+rain_man = 0.85, exploration_fraction = 0.5, end_e = 0.2, Fstack = 2, 84x84 img

@@ -1,8 +1,16 @@
+# This version of dqn_atari uses a e-greedy policy
+# When exploring, it simulates a human, moving the bar to direction where the ball is
+# I have added a parameter to this - rain_man - which is the probability of choosing a human-like action
+# instead of a random one.  
+
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/dqn/#dqn_ataripy
 import os
 import random
 import time
 from dataclasses import dataclass
+import sys
+sys.path.append('../cleanrl/jexperiments/breakout_img_decoders')
+import bout_img_decoder
 
 import gymnasium as gym
 import numpy as np
@@ -72,7 +80,7 @@ class Args:
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    tau: float = 0.8
+    tau: float = 1.0
     """the target network update rate"""
     target_network_frequency: int = 1000
     """the timesteps it takes to update the target network"""
@@ -82,12 +90,17 @@ class Args:
     """the starting epsilon for exploration"""
     end_e: float = 0.2
     """the ending epsilon for exploration"""
-    exploration_fraction: float = 0.40
+    exploration_fraction: float = 0.50
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
-    learning_starts: int = 20000
+    learning_starts: int = 20000 
     """timestep to start learning"""
     train_frequency: int = 8
     """the frequency of training"""
+    
+    rain_man: float = 0.85
+    """probability of choosing an action that follows the ball (human-like)
+    when exploring."""
+        
 
 
 def make_env(env_id, seed, idx, capture_video, run_name):
@@ -107,7 +120,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
+        env = gym.wrappers.FrameStack(env, 2)
 
         env.action_space.seed(seed)
         return env
@@ -115,12 +128,11 @@ def make_env(env_id, seed, idx, capture_video, run_name):
     return thunk
 
 
-# ALGO LOGIC: initialize agent here:
 class QNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv2d(4, 32, 8, stride=4),
+            nn.Conv2d(2, 32, 8, stride=4),
             nn.ReLU(),
             nn.Conv2d(32, 64, 4, stride=2),
             nn.ReLU(),
@@ -219,11 +231,17 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
 
     # TRY NOT TO MODIFY: start the game
     obs, _ = envs.reset(seed=args.seed)
-    for global_step in range(args.total_timesteps):
+    for global_step in range(args.total_timesteps):        
+        
         # ALGO LOGIC: put action logic here
         epsilon = linear_schedule(args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps, global_step)
         if random.random() < epsilon:
-            actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
+            if random.random() < args.rain_man:
+                #Human-like action
+                actions = np.array([bout_img_decoder.get_human_action(env_obs,64) for env_obs in obs])
+            else:
+                #Random action
+                actions = np.array([envs.single_action_space.sample() for _ in range(args.num_envs)])
         else:
             q_values = q_network(torch.Tensor(obs).to(device))
             actions = torch.argmax(q_values, dim=1).cpu().numpy()

@@ -5,7 +5,7 @@ names_file="model_names01.txt"
 
 truncate -s 0 $log_file
 
-for ((i=0; i<=5; i++)); do
+for ((i=0; i<=1; i++)); do
     file="toRun/dqn_atari0${i}.py"
 
     read model_name

@@ -102,7 +102,7 @@ class Args:
     train_frequency: int = 8
     """the frequency of training"""
     
-    rain_man: float = 0.7
+    rain_man: float = 0.65
     """probability of choosing an action that follows the ball (human-like)
     when exploring."""
         
@@ -156,11 +156,6 @@ class QNetwork(nn.Module):
 def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     slope = (end_e - start_e) / duration
     return max(slope * t + start_e, end_e)
-
-
-def human_policy(obs):
-    bar_pos = get_bar_pos(obs)
-    ball_pos = get_ball_pos(obs)
 
 
 if __name__ == "__main__":

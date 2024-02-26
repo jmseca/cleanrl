@@ -5,6 +5,8 @@ FIRE = 1
 RIGHT = 2
 LEFT = 3
 
+ERROR_MARGIN = 3
+"""Error margin for the ball position. If the ball is within this margin, the bar will not move"""
 
 def get_human_action(env_obs, img_size):
     """
@@ -23,9 +25,9 @@ def get_human_action(env_obs, img_size):
         raise ValueError("img_size must be 64, 84 or 128")
     
     
-    bar_pos = get_bar_pos(env_obs[1])
-    ball_pos = get_ball_pos(env_obs[1])
-    ball_speed = get_ball_speed(env_obs[0],env_obs[1],)
+    bar_pos = get_bar_pos(env_obs[-1])
+    ball_pos = get_ball_pos(env_obs[-1])
+    ball_speed = get_ball_speed(env_obs[-2],env_obs[-1],)
     
     if ball_pos[0] < 0 and ball_pos[0] < 0:
         # Ball is not known in this frame
@@ -33,9 +35,9 @@ def get_human_action(env_obs, img_size):
     
     future_col = ball_pos[0] + ball_speed[0]
     
-    if future_col > bar_pos:
+    if future_col + ERROR_MARGIN > bar_pos:
         return RIGHT
-    elif future_col < bar_pos:
+    elif future_col - ERROR_MARGIN < bar_pos:
         return LEFT
     else:
         return NOOP
