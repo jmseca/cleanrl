@@ -1,16 +1,14 @@
-# Here I will create "states"
-# I will parse the images first, only Framestack = 2, and then I will create a state from the two images
-# I will then use this state to train the DQN
+# This version of dqn_atari uses a e-greedy policy
+# When exploring, it simulates a human, moving the bar to direction where the ball is
 
-# Failed idea. Did not work :(((. Very low reward
-# Maybe try this later, but not with DQN. With a different model
-    
-    
-import matplotlib.pyplot as plt
+# docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/dqn/#dqn_ataripy
 import os
 import random
 import time
 from dataclasses import dataclass
+import sys
+sys.path.append('breakout_img_decoders')
+import bout_img_decoder
 
 import gymnasium as gym
 import numpy as np
@@ -30,109 +28,9 @@ from stable_baselines3.common.buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
 
 
-# Johnny State Constants
-
-#lv = line+value
-blue_brick_lv = (87,92,85)
-green_brick_lv = (81,86,124)
-yellow_brick_lv = (75,80,148)
-orange1_brick_lv = (69,74,131)
-orange2_brick_lv = (63,68,129)
-red_brick_lv = (57,62,110)
-
-bar_line : int = 190
-"""In which horizontal line the bar is located, in each frame"""
-before_wall_left : int = 8
-"""What pixel column on the left is next to the vertical wall"""
-before_wall_right : int = 151
-"""What pixel column on the right is next to the vertical wall"""
-bar_middle_pixel : int = 10
-"""The pixel width that is the middle of the bar"""
-bar_pixel_value : int = 110
-"""The grey scale pixel value of the bar"""
-
-ball_start_line : int = 32
-"""The first line where the ball might appear"""
-ball_end_line : int = 195
-"""The last line where the ball might appear"""
-ball_pixel_value : int = 110
-"""The grey scale pixel value of the ball"""
 
 
-# TODO
-# APAGAR ISTO
-speed_xv = []
-speed_yv = []
-ball_posxv = []
-ball_posyv = []
-bar_posv = []
 
-
-bricks_lv = [blue_brick_lv, green_brick_lv, yellow_brick_lv, orange1_brick_lv, orange2_brick_lv, red_brick_lv]
-
-# Johnny State Functions
-
-def get_bricks_column_value(frame, col_number):
-    out_arr = [0,0,0,0,0,0]
-    row_pixels_to_check = (9 + 8*col_number, 14 + 8*col_number)
-    for i, brick in enumerate(bricks_lv):
-        line1 = brick[0]+1
-        line2 = brick[1]-1
-        value = brick[2]
-        if frame[line1][row_pixels_to_check[0]] == value and frame[line1][row_pixels_to_check[1]] == value and frame[line2][row_pixels_to_check[0]] == value and frame[line2][row_pixels_to_check[1]] == value:
-            out_arr[i] = 1
-    return sum(map(lambda x: x[1]*2**x[0], enumerate(out_arr)))
-
-
-def get_bar_horizontal_pos(frame):
-    line = frame[bar_line][before_wall_left:(before_wall_right+1)]
-    start_pixel = 0
-    end_pixel = 0
-    found = False
-    first_empty = line[0] != bar_pixel_value
-    for i, pixel in enumerate(line):
-        if not(found):
-            if pixel == bar_pixel_value:
-                start_pixel = i
-                found = True
-        else:
-            if pixel != bar_pixel_value:
-                end_pixel = i
-                break
-    if first_empty:
-        return start_pixel + before_wall_left + bar_middle_pixel
-    else:
-        return end_pixel + before_wall_left - bar_middle_pixel
-    
-    
-def get_ball_pos(frame):
-    """
-    Returns (row, column)
-    """
-    ball_frame = frame[ball_start_line:ball_end_line]
-    for n, line in enumerate(ball_frame):
-        for i in range(before_wall_left, (before_wall_right+1)):
-            if line[i] == ball_pixel_value:
-                
-                if frame[ball_start_line+n-1][i] != ball_pixel_value and\
-                    line[i+3] != ball_pixel_value and line[i-3] != ball_pixel_value and\
-                    frame[ball_start_line+n+1][i+1] == ball_pixel_value:
-                    
-                    return (ball_start_line+n, i)
-                
-    # print("Ball not found - Will save image")
-    # Will assume that ball is gone
-
-    return (195,80)
-
-
-def get_ball_speed(frame1, frame2):
-    ball1 = get_ball_pos(frame1)
-    ball2 = get_ball_pos(frame2)
-    return (ball2[0] - ball1[0], ball2[1] - ball1[1])
-    
-    
-        
 
 
 @dataclass
@@ -197,41 +95,12 @@ class Args:
     """the ending epsilon for exploration"""
     exploration_fraction: float = 0.20
     """the fraction of `total-timesteps` it takes from start-e to go end-e"""
-    learning_starts: int = 20000
+    learning_starts: int = 100 #Dont forget to put back to 20K
     """timestep to start learning"""
     train_frequency: int = 8
     """the frequency of training"""
-    
-    #Model Consts
-    normalize_net_inputs: bool = True
-    """whether to normalize the inputs of the NN or not"""
-    input_max_values: int = 5
-    """When normalized, the inputs will be in the range [0, input_max_values]"""
+        
 
-
-def make_pre_env(env_id, seed, idx, capture_video, run_name):
-    def pre_thunk():
-        if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            env = gym.make(env_id)
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-
-        env = NoopResetEnv(env, noop_max=30)
-        env = MaxAndSkipEnv(env, skip=4)
-        env = EpisodicLifeEnv(env)
-        if "FIRE" in env.unwrapped.get_action_meanings():
-            env = FireResetEnv(env)
-        env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (84, 84))
-        env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
-
-        env.action_space.seed(seed)
-        return env
-
-    return pre_thunk
 
 def make_env(env_id, seed, idx, capture_video, run_name):
     def thunk():
@@ -248,73 +117,44 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
         env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (84, 84))
+        env = gym.wrappers.ResizeObservation(env, (64, 64))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 2)
 
         env.action_space.seed(seed)
         return env
 
-    return pre_thunk
+    return thunk
 
-# ALGO LOGIC: initialize agent here:
+
 class QNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Linear(23, 32),
+            nn.Conv2d(2, 32, 8, stride=4),
             nn.ReLU(),
-            nn.Linear(32, 16),
+            nn.Conv2d(32, 64, 4, stride=2),
             nn.ReLU(),
-            nn.Linear(16, env.single_action_space.n),
+            nn.Conv2d(64, 64, 3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(1024, 128),
+            nn.ReLU(),
+            nn.Linear(128, env.single_action_space.n),
         )
-        
-        for layer in self.network:
-            if isinstance(layer, nn.Linear):
-                layer.weight.data = layer.weight.data.double()
-                if layer.bias is not None:
-                    layer.bias.data = layer.bias.data.double()
 
-    def forward(self, obs):
-        
-        def process_element(elem):
-            
-                     
-            bar_pos = get_bar_horizontal_pos(elem[1])
-            
-            ball_pos = get_ball_pos(elem[1])
-            ball_speed = get_ball_speed(elem[0], elem[1])
-            bricks = [get_bricks_column_value(elem[1], i) for i in range(18)]
-                        
-            if args.normalize_net_inputs: 
-                norm_bar_pos = max(bar_pos - 6,0) / 148 # 6 -> minimum bar position (I guess), 154  -> maximum bar position (154-6=148)
-                norm_ball_pos = [(ball_pos[0] - 32) / 163, (ball_pos[1]  - 32) / 163]
-                
-                if ball_speed[0]>10 or ball_speed[1]>10 or ball_speed[0]<-10 or ball_speed[1]<-10:
-                    # Ball badly recognized or game restart
-                    norm_ball_speed = [1,1]
-                else:
-                    # Assuming 10px/frame is the maximum accepted speed
-                    norm_ball_speed = [(ball_speed[0] + 10) / 10, (ball_speed[1] + 10) / 10]
-                
-                norm_ball_speed = [ball_speed[0] / 4, ball_speed[1] / 4]
-                norm_bricks = [brick / 63 for brick in bricks]
-                
-                x = np.array([norm_bar_pos, norm_ball_pos[0], norm_ball_pos[1],
-                            norm_ball_speed[0], norm_ball_speed[1]] + norm_bricks) * args.input_max_values
-                
-            else:            
-                x = np.array([bar_pos, ball_pos[0], ball_pos[1], ball_speed[0], ball_speed[1]] + bricks)
-            
-            
-            return self.network(torch.tensor(x, dtype=torch.double))
-
-        return torch.stack([process_element(elem) for elem in obs])
+    def forward(self, x):
+        return self.network(x / 255.0)
 
 
-def linear_schedule(start_e: float, end_e: float, duration: int, t: int):#
+def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     slope = (end_e - start_e) / duration
     return max(slope * t + start_e, end_e)
+
+
+def human_policy(obs):
+    bar_pos = get_bar_pos(obs)
+    ball_pos = get_ball_pos(obs)
 
 
 if __name__ == "__main__":
@@ -360,9 +200,9 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # TRY NOT TO MODIFY: setup the environment
+    # env setup
     envs = gym.vector.SyncVectorEnv(
-        [make_pre_env(args.env_id, args.seed + i, i, args.capture_video, run_name) for i in range(args.num_envs)]
+        [make_env(args.env_id, args.seed + i, i, args.capture_video, run_name) for i in range(args.num_envs)]
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
@@ -393,16 +233,18 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
     )
     start_time = time.time()
 
+    randomz = False
     # TRY NOT TO MODIFY: start the game
     obs, _ = envs.reset(seed=args.seed)
     for global_step in range(args.total_timesteps):
         # ALGO LOGIC: put action logic here
         epsilon = linear_schedule(args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps, global_step)
         if random.random() < epsilon:
-            actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
+            randomz = True
+            actions = np.array([bout_img_decoder.get_human_action(env_obs,64) for env_obs in obs])
         else:
-            q_values = q_network(torch.tensor(obs, dtype=torch.double).to(device))
-            actions = np.array([torch.argmax(q_values).cpu().numpy()])
+            q_values = q_network(torch.Tensor(obs).to(device))
+            actions = torch.argmax(q_values, dim=1).cpu().numpy()
 
         # TRY NOT TO MODIFY: execute the game and log data.
         next_obs, rewards, terminations, truncations, infos = envs.step(actions)
@@ -430,7 +272,7 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
             if global_step % args.train_frequency == 0:
                 data = rb.sample(args.batch_size)
                 with torch.no_grad():
-                    target_max, _ = target_network(data.next_observations).max()
+                    target_max, _ = target_network(data.next_observations).max(dim=1)
                     td_target = data.rewards.flatten() + args.gamma * target_max * (1 - data.dones.flatten())
                 old_val = q_network(data.observations).gather(1, data.actions).squeeze()
                 loss = F.mse_loss(td_target, old_val)
@@ -462,7 +304,7 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
 
         episodic_returns = evaluate(
             model_path,
-            make_pre_env,
+            make_env,
             args.env_id,
             eval_episodes=10,
             run_name=f"{run_name}-eval",

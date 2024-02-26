@@ -40,7 +40,7 @@ class Args:
 
     save_model: bool = True
     """whether to save model into the `runs/{run_name}` folder"""
-    models_dir: str = "../automaterl/runs/"
+    models_dir: str = "../runs/newRuns/"
     """the directory which stores the models we want to evaluate"""
     choose_model_in_runtime: bool = True
     """whether to print the available models from the 'models_dir' dir
@@ -50,6 +50,11 @@ class Args:
     evaluate_all: bool = False
     """if toggled, evaluate all models in the `models_dir`"""
     
+    # Model specific
+    frame_stack: int = 4
+    """the number of frames to stack"""
+    image_size: int = 84
+    """the size of the preprocessed frame (height and width)"""
 
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
@@ -75,9 +80,9 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
         env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (84, 84))
+        env = gym.wrappers.ResizeObservation(env, (args.image_size, args.image_size))
         env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
+        env = gym.wrappers.FrameStack(env, args.frame_stack)
 
         env.action_space.seed(seed)
         return env
@@ -89,15 +94,18 @@ def make_env(env_id, seed, idx, capture_video, run_name):
 class QNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
+        
+        hidden_input = 3136 if args.image_size == 84 else 9216
+        
         self.network = nn.Sequential(
-            nn.Conv2d(4, 32, 8, stride=4),
+            nn.Conv2d(args.frame_stack, 32, 8, stride=4),
             nn.ReLU(),
             nn.Conv2d(32, 64, 4, stride=2),
             nn.ReLU(),
             nn.Conv2d(64, 64, 3, stride=1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(3136, 512),
+            nn.Linear(hidden_input, 512),
             nn.ReLU(),
             nn.Linear(512, env.single_action_space.n),
         )
@@ -131,7 +139,17 @@ poetry run pip install "stable_baselines3==2.0.0a1" "gymnasium[atari,accept-rom-
     
     for run_name in run_names:
         print(f"Evaluating {run_name}")
-    
+        
+        args.frame_stack = 4
+        args.image_size = 84
+        if "Random06" in run_name or "Stack" in run_name:
+            print("LESS STACK")
+            args.frame_stack = 2
+        if "Img" in run_name or "BiggerImage" in run_name or "Random05" in run_name:
+            print("BIGGER IMAGE")
+            args.image_size = 128
+            
+        
         writer = SummaryWriter(f"{args.models_dir}{run_name}/eval")
 
         # TRY NOT TO MODIFY: seeding
