@@ -1,4 +1,6 @@
-BreakoutERainMan01
-rain_man = 0.75, exploration_fraction = 0.5, end_e = 0.2, Fstack = 2, 84x84 img
-BreakoutERainMan02
-rain_man = 0.85, exploration_fraction = 0.5, end_e = 0.2, Fstack = 2, 84x84 img
+BreakoutERainMan02_1
+rain_man = 0.5, exploration_fraction = 0.6, end_e = 0.2, Fstack = 2, 84x84 img, seed = 1
+BreakoutERainMan02_2
+rain_man = 0.5, exploration_fraction = 0.6, end_e = 0.2, Fstack = 2, 84x84 img, seed = 27
+BreakoutERainMan02_3
+rain_man = 0.5, exploration_fraction = 0.6, end_e = 0.2, Fstack = 2, 84x84 img, seed = 41

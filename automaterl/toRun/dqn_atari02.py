@@ -34,7 +34,7 @@ from torch.utils.tensorboard import SummaryWriter
 class Args:
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
     """the name of this experiment"""
-    seed: int = 1
+    seed: int = 41
     """seed of the experiment"""
     torch_deterministic: bool = True
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
@@ -97,7 +97,7 @@ class Args:
     train_frequency: int = 8
     """the frequency of training"""
     
-    rain_man: float = 0.75
+    rain_man: float = 0.25
     """probability of choosing an action that follows the ball (human-like)
     when exploring."""
         

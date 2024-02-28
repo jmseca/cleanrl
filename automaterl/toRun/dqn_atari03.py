@@ -97,7 +97,7 @@ class Args:
     train_frequency: int = 8
     """the frequency of training"""
     
-    rain_man: float = 0.85
+    rain_man: float = 0.5
     """probability of choosing an action that follows the ball (human-like)
     when exploring."""
         

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-log_file="logautofile01.log"
-names_file="model_names01.txt"
+log_file="logautofile03.log"
+names_file="model_names03.txt"
 
 truncate -s 0 $log_file
 
-for ((i=0; i<=2; i++)); do
+for ((i=6; i<=8; i++)); do
     file="toRun/dqn_atari0${i}.py"
 
     read model_name
